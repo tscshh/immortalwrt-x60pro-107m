@@ -85,16 +85,18 @@ jobs:
       - name: Build firmware
         run: |
           cd immortalwrt
-          make -j$(nproc) V=s 2>&1 | tee build.log
+          set -o pipefail
+          (make -j$(nproc) V=s 2>&1 || make -j1 V=s 2>&1) | tee build.log
 
       - name: Prepare artifacts
         if: success()
         run: |
           mkdir -p output
-          cp immortalwrt/bin/targets/mediatek/filogic/immortalwrt-*ruijie_rg-x60-pro-107m* output/ 2>/dev/null || true
-          cp immortalwrt/bin/targets/mediatek/filogic/*.buildinfo output/ 2>/dev/null || true
-          cp immortalwrt/bin/targets/mediatek/filogic/sha256sums output/ 2>/dev/null || true
+          cp immortalwrt/bin/targets/mediatek/filogic/immortalwrt-*ruijie_rg-x60-pro-107m* output/
+          cp immortalwrt/bin/targets/mediatek/filogic/*.buildinfo output/ || true
+          cp immortalwrt/bin/targets/mediatek/filogic/sha256sums output/ || true
           ls -lh output/
+          ls output/*sysupgrade.bin || { echo "::error::Firmware image missing!"; exit 1; }
 
       - name: Upload artifacts
         if: success()
