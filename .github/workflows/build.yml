@@ -6,7 +6,7 @@ on:
       version:
         description: 'ImmortalWrt version'
         required: true
-        default: 'v25.10'
+        default: 'openwrt-25.12'
 
 env:
   DEVICE_NAME: ruijie_rg-x60-pro-107m
