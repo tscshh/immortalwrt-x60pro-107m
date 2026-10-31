@@ -74,7 +74,7 @@ jobs:
         run: |
           cd immortalwrt
           printf 'CONFIG_TARGET_mediatek=y\nCONFIG_TARGET_mediatek_filogic=y\nCONFIG_TARGET_mediatek_filogic_DEVICE_ruijie_rg-x60-pro-107m=y\n' > .config
-          make olddefconfig
+          yes "" | make oldconfig
           grep "CONFIG_TARGET_mediatek_filogic_DEVICE_ruijie_rg-x60-pro-107m=y" .config
 
       - name: Download sources
