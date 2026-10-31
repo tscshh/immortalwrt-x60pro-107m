@@ -67,9 +67,8 @@ jobs:
       - name: Fix recursive dependency
         run: |
           cd immortalwrt
-          rm -rf feeds/luci/applications/luci-app-weechat
+          ./scripts/feeds uninstall luci-app-weechat
           rm -rf package/feeds/luci/luci-app-weechat
-          ./scripts/feeds install -a
 
       - name: Load configuration
         run: |
