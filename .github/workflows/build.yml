@@ -9,9 +9,7 @@ on:
         default: 'v25.10'
       clean:
         description: '纯净版 (仅基础包+LuCI)'
-        type: boolean
-        required: true
-        default: true
+        default: 'true'
 
 env:
   DEVICE_NAME: ruijie_rg-x60-pro-107m
