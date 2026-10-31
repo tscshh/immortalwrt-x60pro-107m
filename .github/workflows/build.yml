@@ -64,6 +64,13 @@ jobs:
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
+      - name: Fix recursive dependency
+        run: |
+          cd immortalwrt
+          find package/feeds -type d -name "luci-app-weechat" -exec rm -rf {} + 2>/dev/null || true
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+
       - name: Load configuration
         run: |
           cd immortalwrt
