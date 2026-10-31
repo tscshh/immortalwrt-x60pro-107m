@@ -73,8 +73,10 @@ jobs:
       - name: Load configuration
         run: |
           cd immortalwrt
-          cp ../config.107m-clean.seed .config.seed
           make defconfig
+          sed -i 's/CONFIG_TARGET_mediatek_filogic_DEVICE_ruijie_rg-x60-pro=y/CONFIG_TARGET_mediatek_filogic_DEVICE_ruijie_rg-x60-pro-107m=y/' .config
+          echo "CONFIG_TARGET_mediatek_filogic_DEVICE_ruijie_rg-x60-pro-107m=y" >> .config
+          make olddefconfig
           grep "CONFIG_TARGET_mediatek_filogic_DEVICE_ruijie_rg-x60-pro-107m=y" .config
 
       - name: Download sources
