@@ -70,24 +70,6 @@ jobs:
           ./scripts/feeds uninstall luci-app-weechat
           rm -rf package/feeds/luci/luci-app-weechat
 
-      - name: Patch mac80211 to install autoconf.h
-        run: |
-          cd immortalwrt
-          python3 << 'PYEOF'
-          p = 'package/kernel/mac80211/Makefile'
-          with open(p) as f:
-              content = f.read()
-          old = '\t$(CP) $(PKG_BUILD_DIR)/backport-include/* $(1)/usr/include/mac80211-backport/\n'
-          new = old + '\t$(INSTALL_DIR) $(1)/usr/include/mac80211-backport/backport\n\t$(CP) $(PKG_BUILD_DIR)/include/autoconf.h $(1)/usr/include/mac80211-backport/backport/autoconf.h\n'
-          if old in content:
-              content = content.replace(old, new)
-              with open(p, 'w') as f:
-                  f.write(content)
-              print('mac80211 InstallDev patched to install autoconf.h')
-          else:
-              print('WARNING: patch anchor not found, proceeding anyway')
-          PYEOF
-
       - name: Load configuration
         run: |
           cd immortalwrt
@@ -104,10 +86,20 @@ jobs:
         run: |
           cd immortalwrt
           set -o pipefail
-          # Pre-build mac80211 so autoconf.h lands in staging_dir before mt76 configures
-          make package/kernel/mac80211/compile -j$(nproc) V=s 2>&1 | tee build-mac80211.log
-          # Full build with single-thread fallback for any remaining races
-          (make -j$(nproc) V=s 2>&1 || make -j1 V=s 2>&1) | tee build.log
+          make -j$(nproc) V=s 2>&1 | tee build.log || {
+            echo "::warning::First build pass failed, attempting autoconf.h staging fix"
+            STG="staging_dir/target-aarch64_cortex-a53_musl/usr/include/mac80211-backport/backport"
+            if [ ! -f "$STG/autoconf.h" ]; then
+              AH=$(find build_dir -name autoconf.h -path '*backports*' 2>/dev/null | head -n1)
+              echo "Found autoconf.h candidate: $AH"
+              if [ -n "$AH" ]; then
+                mkdir -p "$STG"
+                cp "$AH" "$STG/autoconf.h"
+                echo "Installed $AH -> $STG/autoconf.h"
+              fi
+            fi
+            (make -j$(nproc) V=s 2>&1 || make -j1 V=s 2>&1) | tee -a build.log
+          }
 
       - name: Prepare artifacts
         if: success()
