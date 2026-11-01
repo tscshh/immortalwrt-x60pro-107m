@@ -25,7 +25,7 @@ jobs:
           with open('target/linux/mediatek/image/filogic.mk', 'r') as f:
               content = f.read()
           marker = 'TARGET_DEVICES += ruijie_rg-x60-pro\n'
-          addition = '\ndefine Device/ruijie_rg-x60-pro-107m\n  DEVICE_VENDOR := Ruijie\n  DEVICE_MODEL := RG-X60 Pro\n  DEVICE_VARIANT := 107M (Yuzhii U-Boot Layout)\n  DEVICE_DTS := mt7986a-ruijie-rg-x60-pro-107m\n  DEVICE_DTS_DIR := ../dts\n  DEVICE_PACKAGES := kmod-mt7986-firmware mt7986-wo-firmware\n  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata\nendef\nTARGET_DEVICES += ruijie_rg-x60-pro-107m\n'
+          addition = '\ndefine Device/ruijie_rg-x60-pro-107m\n  DEVICE_VENDOR := Ruijie\n  DEVICE_MODEL := RG-X60 Pro\n  DEVICE_VARIANT := 107M (Yuzhii U-Boot Layout)\n  DEVICE_DTS := mt7986a-ruijie-rg-x60-pro-107m\n  DEVICE_DTS_DIR := ../dts\n  DEVICE_PACKAGES := kmod-mt7915e kmod-mt7986-firmware mt7986-wo-firmware\n  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata\nendef\nTARGET_DEVICES += ruijie_rg-x60-pro-107m\n'
           if marker in content:
               content = content.replace(marker, marker + addition)
               with open('target/linux/mediatek/image/filogic.mk', 'w') as f:
@@ -47,8 +47,12 @@ jobs:
       - name: Load configuration
         run: |
           cd immortalwrt
-          printf 'CONFIG_TARGET_mediatek=y\nCONFIG_TARGET_mediatek_filogic=y\nCONFIG_TARGET_mediatek_filogic_DEVICE_ruijie_rg-x60-pro-107m=y\n' > .config
-          yes "" | make oldconfig
+          printf 'CONFIG_TARGET_mediatek=y\nCONFIG_TARGET_mediatek_filogic=y\nCONFIG_TARGET_mediatek_filogic_DEVICE_ruijie_rg-x60-pro-107m=y\nCONFIG_PACKAGE_kmod-cfg80211=y\nCONFIG_PACKAGE_kmod-mac80211=y\nCONFIG_PACKAGE_kmod-mt76-core=y\nCONFIG_PACKAGE_kmod-mt7915e=y\nCONFIG_PACKAGE_kmod-mt7986-firmware=y\nCONFIG_PACKAGE_mt7986-wo-firmware=y\n' > .config
+          make defconfig
+          echo "===== verification ====="
+          for s in CONFIG_PACKAGE_kmod-cfg80211 CONFIG_PACKAGE_kmod-mac80211 CONFIG_PACKAGE_kmod-mt7915e; do
+            grep -q "^$s=y" .config && echo "OK  $s=y" || echo "MISSING $s"
+          done
 
       - name: Diagnose config
         run: |
