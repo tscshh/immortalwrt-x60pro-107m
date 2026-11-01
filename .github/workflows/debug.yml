@@ -1,0 +1,67 @@
+name: Debug Wireless Config
+
+on:
+  workflow_dispatch:
+
+jobs:
+  debug:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Clone ImmortalWrt source
+        run: |
+          git clone --depth 1 -b openwrt-25.12 https://github.com/immortalwrt/immortalwrt.git
+
+      - name: Apply 107M layout DTS
+        run: |
+          cp mt7986a-ruijie-rg-x60-pro-107m.dts immortalwrt/target/linux/mediatek/dts/mt7986a-ruijie-rg-x60-pro-107m.dts
+
+      - name: Apply filogic.mk patch
+        run: |
+          cd immortalwrt
+          python3 << 'PYEOF'
+          with open('target/linux/mediatek/image/filogic.mk', 'r') as f:
+              content = f.read()
+          marker = 'TARGET_DEVICES += ruijie_rg-x60-pro\n'
+          addition = '\ndefine Device/ruijie_rg-x60-pro-107m\n  DEVICE_VENDOR := Ruijie\n  DEVICE_MODEL := RG-X60 Pro\n  DEVICE_VARIANT := 107M (Yuzhii U-Boot Layout)\n  DEVICE_DTS := mt7986a-ruijie-rg-x60-pro-107m\n  DEVICE_DTS_DIR := ../dts\n  DEVICE_PACKAGES := kmod-mt7986-firmware mt7986-wo-firmware\n  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata\nendef\nTARGET_DEVICES += ruijie_rg-x60-pro-107m\n'
+          if marker in content:
+              content = content.replace(marker, marker + addition)
+              with open('target/linux/mediatek/image/filogic.mk', 'w') as f:
+                  f.write(content)
+              print('107m device definition added')
+          else:
+              print('ERROR: ruijie_rg-x60-pro definition not found')
+              raise SystemExit(1)
+          PYEOF
+
+      - name: Update feeds
+        run: |
+          cd immortalwrt
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+          ./scripts/feeds uninstall luci-app-weechat
+          rm -rf package/feeds/luci/luci-app-weechat
+
+      - name: Load configuration
+        run: |
+          cd immortalwrt
+          printf 'CONFIG_TARGET_mediatek=y\nCONFIG_TARGET_mediatek_filogic=y\nCONFIG_TARGET_mediatek_filogic_DEVICE_ruijie_rg-x60-pro-107m=y\n' > .config
+          yes "" | make oldconfig
+
+      - name: Diagnose config
+        run: |
+          cd immortalwrt
+          echo "===== 1. wireless config symbols in .config ====="
+          grep -E '^CONFIG_PACKAGE_kmod-(cfg80211|mac80211|mt76|mt76-core|mt7915e|crypto-cmac)|^CONFIG_PACKAGE_wpad|^CONFIG_PACKAGE_luci|^CONFIG_TARGET_mediatek_filogic_DEVICE|^CONFIG_DRIVER_11' .config || echo "(none matched)"
+          echo "===== 2. not-set markers for wireless ====="
+          grep -E 'not set' .config | grep -Ei 'cfg80211|mac80211|mt76|wpad|luci' || echo "(none)"
+          echo "===== 3. blank lines in .config that mention cfg80211 ====="
+          grep -in 'cfg80211' .config || echo "(no cfg80211 line at all)"
+          echo "===== 4. mac80211 Makefile conditional ====="
+          grep -n -A3 'ifneq ($(CONFIG_PACKAGE_kmod-cfg80211)' package/kernel/mac80211/Makefile
+          echo "===== 5. dry-run: which commands would mac80211 compile execute ====="
+          make -n package/kernel/mac80211/compile 2>&1 | grep -nE 'allnoconfig|modules|rm -rf .*modules|Build/Compile' | head -n 20 || echo "(no modules command in dry run)"
+          echo "===== 6. dry-run: mt76 compile prerequisites ====="
+          make -n package/kernel/mt76/compile 2>&1 | head -n 15 || true
