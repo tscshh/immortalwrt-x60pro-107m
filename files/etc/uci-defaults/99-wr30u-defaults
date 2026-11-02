@@ -1,0 +1,14 @@
+#!/bin/sh
+
+# 默认 LAN 地址 192.168.6.1
+uci set network.lan.ipaddr='192.168.6.1'
+uci set network.lan.netmask='255.255.255.0'
+uci commit network
+
+# 默认开启 UPnP (miniupnpd)
+uci set upnpd.config.enabled='1'
+uci set upnpd.config.internal_iface='lan'
+uci commit upnpd
+/etc/init.d/miniupnpd enable
+
+exit 0
