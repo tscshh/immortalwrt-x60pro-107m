@@ -42,39 +42,7 @@ jobs:
 
       - name: Apply filogic.mk patch
         run: |
-          cd immortalwrt
-          python3 << 'PYEOF'
-          with open('target/linux/mediatek/image/filogic.mk', 'r') as f:
-              content = f.read()
-          marker = 'TARGET_DEVICES += xiaomi_mi-router-wr30u-stock\n'
-          addition = '''
-define Device/xiaomi_mi-router-wr30u-112m
-  DEVICE_VENDOR := Xiaomi
-  DEVICE_MODEL := Mi Router WR30U
-  DEVICE_VARIANT := (Yuzhii U-Boot 112M layout)
-  DEVICE_DTS := mt7981b-xiaomi-mi-router-wr30u-112m
-  DEVICE_DTS_DIR := ../dts
-  UBINIZE_OPTS := -E 5
-  BLOCKSIZE := 128k
-  PAGESIZE := 2048
-  IMAGE_SIZE := 114688k
-  KERNEL_IN_UBI := 1
-  DEVICE_PACKAGES := kmod-mt7915e kmod-mt7981-firmware mt7981-wo-firmware luci-app-upnp luci-i18n-upnp-zh-cn
-  IMAGES += factory.bin
-  IMAGE/factory.bin := append-ubi | check-size $$$$(IMAGE_SIZE)
-  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
-endef
-TARGET_DEVICES += xiaomi_mi-router-wr30u-112m
-'''
-          if marker in content:
-              content = content.replace(marker, marker + addition)
-              with open('target/linux/mediatek/image/filogic.mk', 'w') as f:
-                  f.write(content)
-              print('112m device definition added')
-          else:
-              print('ERROR: xiaomi_mi-router-wr30u-stock definition not found')
-              raise SystemExit(1)
-          PYEOF
+          python3 wr30u-patch.py immortalwrt/target/linux/mediatek/image/filogic.mk
 
       - name: Update feeds
         run: |
